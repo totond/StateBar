@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="colorLightBlue">#28fff9</color>
-    <color name="colorTransparencyDeepBlue">#442646f7</color>
+    <color name="colorTransparencyDeepBlue">#1128fff9</color>
     <color name="colorDeepBlue">#2646f7</color>
     <color name="colorKhaki">#f2a24a</color>
     <color name="colorRed">#eb2522</color>

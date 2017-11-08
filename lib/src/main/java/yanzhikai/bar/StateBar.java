@@ -1,6 +1,7 @@
 package yanzhikai.bar;
 
 import android.animation.Animator;
+import android.animation.ArgbEvaluator;
 import android.animation.ObjectAnimator;
 import android.animation.ValueAnimator;
 import android.content.Context;
@@ -34,21 +35,29 @@ public class StateBar extends ViewGroup {
     private ListenRunnable mListenRunnable;
     private @State int mState;
     private ValueAnimator mColorAnimator;
+    private ValueAnimator mThinkingAnimator;
+    private ValueAnimator mListeningAnimator;
+    private float mScale = 1;
+    private int mIncrease = 10;
 
     public static final int NONE = 0 , LISTENING = 1, LISTENING_ACTIVE = 2, MIC_OFF = 3, SYSTEM_ERROR = 4;
     @IntDef({NONE, LISTENING, LISTENING_ACTIVE, MIC_OFF,SYSTEM_ERROR})
     @Retention(RetentionPolicy.SOURCE)
     public  @interface State {}
 
+    private final @ColorInt int COLOR_BLOCK = getResources().getColor(R.color.colorLightBlue);
+    private final @ColorInt int COLOR_LISTENING = getResources().getColor(R.color.colorDeepBlue);
+    private final @ColorInt int COLOR_MIC_OFF = getResources().getColor(R.color.colorKhaki);
+    private final @ColorInt int COLOR_SYS_ERROR = getResources().getColor(R.color.colorRed);
+
 
     private
     @ColorInt
-    int mBlockColor = getResources().getColor(R.color.colorLightBlue);
+    int mBlockColor = COLOR_BLOCK;
     private
     @ColorInt
-    int mBackGroundColor = getResources().getColor(R.color.colorDeepBlue);
-
-    private Paint mMaskPaint, mBlockPaint, mBackGroundPaint;
+    int mBackGroundColor = COLOR_LISTENING;
+    private Paint mMaskPaint, mBackGroundPaint;
 
     public StateBar(Context context) {
         super(context);
@@ -81,16 +90,57 @@ public class StateBar extends ViewGroup {
 
         positionX = -mBlockWidth;
 
-        mColorAnimator = ValueAnimator.ofInt(mBackGroundColor,mBlockColor);
-        mColorAnimator.setDuration(5000);
+
+//        initAnimators();
+    }
+
+    private void initAnimators() {
+        Log.d(TAG, "initAnimators: mid" + mMidTransitionX);
+        mListeningAnimator = ValueAnimator.ofInt(0,mMidTransitionX);
+        mListeningAnimator.setDuration(5000);
+        mListeningAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+            @Override
+            public void onAnimationUpdate(ValueAnimator animation) {
+                int tx = (int) animation.getAnimatedValue();
+                Log.d(TAG, "onAnimationUpdate: tx" + tx);
+                mStateBlock1.setTranslationX(tx);
+                mStateBlock2.setTranslationX(-tx);
+                postInvalidate();
+            }
+        });
+        mListeningAnimator.addListener(new AbstractAnimatorListener() {
+            @Override
+            public void onAnimationEnd(Animator animation) {
+                super.onAnimationEnd(animation);
+                mStateBlock2.setVisibility(GONE);
+            }
+        });
+
+        mColorAnimator = ValueAnimator.ofFloat(0,1);
+        mColorAnimator.setDuration(1000);
         mColorAnimator.setRepeatMode(ValueAnimator.REVERSE);
         mColorAnimator.setRepeatCount(ValueAnimator.INFINITE);
         mColorAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
             @Override
             public void onAnimationUpdate(ValueAnimator animation) {
                 Log.d(TAG, "onAnimationUpdate: ");
-                mBackGroundPaint.setColor((Integer) animation.getAnimatedValue());
+                int color = (int) new ArgbEvaluator().evaluate(animation.getAnimatedFraction(),mBackGroundColor,mBlockColor);
+                mBackGroundPaint.setColor(color);
                 postInvalidate();
+            }
+        });
+
+        Log.d(TAG, "initAnimators: getWidth()" + (getWidth() + mBlockWidth / 4 - mBlockWidth));
+        mThinkingAnimator = ValueAnimator.ofInt(0,getWidth() + mBlockWidth / 4 - mBlockWidth);
+        mThinkingAnimator.setDuration(1000);
+        mThinkingAnimator.setRepeatMode(ValueAnimator.RESTART);
+        mThinkingAnimator.setRepeatCount(ValueAnimator.INFINITE);
+        mThinkingAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+            @Override
+            public void onAnimationUpdate(ValueAnimator animation) {
+                mIncrease = (int) animation.getAnimatedValue();
+                Log.d(TAG, "onAnimationUpdate: " + mIncrease);
+                blockIncrease();
             }
         });
     }
@@ -98,8 +148,16 @@ public class StateBar extends ViewGroup {
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
         super.onMeasure(widthMeasureSpec, heightMeasureSpec);
-        mMaskHeight = MeasureSpec.getSize(heightMeasureSpec);
+//        mMaskHeight = MeasureSpec.getSize(heightMeasureSpec);
 
+    }
+
+    @Override
+    protected void onSizeChanged(int w, int h, int oldw, int oldh) {
+        super.onSizeChanged(w, h, oldw, oldh);
+        mMaskHeight = h;
+        mMidTransitionX = (getWidth() - mBlockWidth) / 2 - positionX;
+        initAnimators();
     }
 
     @Override
@@ -107,7 +165,7 @@ public class StateBar extends ViewGroup {
         Log.d(TAG, "onLayout: ");
         mStateBlock1.layout(positionX, 0, positionX + mBlockWidth, mMaskHeight);
         mStateBlock2.layout(r - positionX - mBlockWidth, 0, r - positionX, mMaskHeight);
-        mMidTransitionX = (getWidth() - mBlockWidth) / 2 - positionX;
+
     }
 
     private void initPaint() {
@@ -132,9 +190,13 @@ public class StateBar extends ViewGroup {
 //        canvas.drawRect(0, bottom - mBarHeight, canvas.getWidth(), bottom, mMaskPaint);
 
         Log.d(TAG, "onDraw: ");
-        listenMove();
+//        listenMove();
 //        canvas.drawRoundRect(positionX,bottom - mBarHeight,positionX + mBlockWidth, bottom,15,15,mBlockPaint);
 //        canvas.drawRect(positionX,bottom - mBlockHeight,positionX + mBlockWidth,bottom, mMaskPaint);
+    }
+
+    private void blockIncrease(){
+        mStateBlock1.layout(positionX - mIncrease, 0, positionX + mBlockWidth + mIncrease, mMaskHeight);
     }
 
     private void listenMove() {
@@ -157,14 +219,38 @@ public class StateBar extends ViewGroup {
         }
     }
 
-    public void startActive(){
+    public void startSpeaking(){
         mColorAnimator.start();
     }
 
     public void startListen() {
         getHandler().removeCallbacks(mListenRunnable);
+        mStateBlock1.setVisibility(VISIBLE);
+        mStateBlock2.setVisibility(VISIBLE);
         mStateBlock1.setTranslationX(0);
-        listenMove();
+        mStateBlock2.setTranslationX(0);
+//        listenMove();
+        mListeningAnimator.start();
+    }
+
+    public void startActive(){
+//        if (mScale > 2.5){
+//            mScale = 1;
+//        }
+        mStateBlock2.setVisibility(GONE);
+        mStateBlock1.setIsMasked(false);
+//        mScale += 0.2f;
+//        mStateBlock1.setScaleX(mScale);
+
+        mIncrease += 10;
+        mStateBlock1.layout(positionX - mIncrease, 0, positionX + mBlockWidth + mIncrease, mMaskHeight);
+        Log.d(TAG, "getWidth: " + mStateBlock1.getWidth());
+    }
+
+    public void startThink(){
+        mStateBlock2.setVisibility(GONE);
+        mStateBlock1.setIsMasked(false);
+        mThinkingAnimator.start();
     }
 
     private class ListenRunnable implements Runnable {
