@@ -45,10 +45,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 mStateBar.startThink();
                 break;
             case R.id.btn_speaking:
-                mStateBar.startSpeaking();
+                mStateBar.startSpeak();
                 break;
             case R.id.btn_mic_off:
-
+                mStateBar.startMicOff();
                 break;
             case R.id.btn_sys_error:
 
