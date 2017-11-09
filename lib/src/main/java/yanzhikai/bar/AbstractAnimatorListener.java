@@ -7,6 +7,8 @@ import android.animation.Animator;
  */
 
 public abstract class AbstractAnimatorListener implements Animator.AnimatorListener {
+    public boolean isCancel;
+
     @Override
     public void onAnimationStart(Animator animation) {
 
@@ -14,12 +16,12 @@ public abstract class AbstractAnimatorListener implements Animator.AnimatorListe
 
     @Override
     public void onAnimationEnd(Animator animation) {
-
+        isCancel = false;
     }
 
     @Override
     public void onAnimationCancel(Animator animation) {
-
+        isCancel = true;
     }
 
     @Override

@@ -2,6 +2,7 @@ package yanzhikai.bar;
 
 import android.animation.Animator;
 import android.animation.ArgbEvaluator;
+import android.animation.ObjectAnimator;
 import android.animation.ValueAnimator;
 import android.content.Context;
 import android.graphics.BlurMaskFilter;
@@ -26,19 +27,18 @@ public class StateBar extends ViewGroup {
     public static final String TAG = "StateBar";
     private Context mContext;
     private int mMaskHeight = 30;
-    private int mBlockWidth = 220, mBlockHeight = 15;
+    private int mBlockWidth = 220;
     private int mBarHeight = 15;
     private int positionX = 0;
     private int mMidTransitionX = 0;
-    private StateBlock mStateBlock1, mStateBlock2;
+    private StateBlock mStateBlock1, mStateBlock2, mMidBlock;
     private @State int mCurrentState;
-    private ValueAnimator mSpeakingAnimator,mThinkingAnimator,mListeningAnimator;
+    private ValueAnimator mSpeakingAnimator,mThinkingAnimator,mListeningAnimator,mColorAnimator,mAlphaOutAnimator,mAlphaInAnimator;
     private ValueAnimator mCurrentStateAnimator;
-    private float mScale = 1;
     private int mIncrease = 10;
 
-    public static final int NONE = 0 , LISTENING = 1, LISTENING_ACTIVE = 2,THINKING = 3,SPEAKING = 4, MIC_OFF = 5, SYSTEM_ERROR = 6;
-    @IntDef({NONE, LISTENING, LISTENING_ACTIVE,THINKING,SPEAKING,MIC_OFF,SYSTEM_ERROR})
+    public static final int IDLE = 0 , LISTENING = 1, LISTENING_ACTIVE = 2,THINKING = 3,SPEAKING = 4, MIC_OFF = 5, SYSTEM_ERROR = 6;
+    @IntDef({IDLE, LISTENING, LISTENING_ACTIVE,THINKING,SPEAKING,MIC_OFF,SYSTEM_ERROR})
     @Retention(RetentionPolicy.SOURCE)
     public  @interface State {}
 
@@ -46,6 +46,7 @@ public class StateBar extends ViewGroup {
     private final @ColorInt int COLOR_LISTENING = getResources().getColor(R.color.colorDeepBlue);
     private final @ColorInt int COLOR_MIC_OFF = getResources().getColor(R.color.colorKhaki);
     private final @ColorInt int COLOR_SYS_ERROR = getResources().getColor(R.color.colorRed);
+    private @ColorInt int mStartColor,mEndColor;
 
 
     private
@@ -78,11 +79,13 @@ public class StateBar extends ViewGroup {
 
         mStateBlock1 = new StateBlock(mContext, this);
         mStateBlock2 = new StateBlock(mContext, this);
+        mMidBlock = new StateBlock(mContext,this);
         addView(mStateBlock1);
         addView(mStateBlock2);
+        addView(mMidBlock);
+        mMidBlock.setVisibility(GONE);
         initPaint();
         setWillNotDraw(false);
-
 
         positionX = -mBlockWidth;
 
@@ -112,27 +115,6 @@ public class StateBar extends ViewGroup {
             }
         });
 
-        mSpeakingAnimator = ValueAnimator.ofFloat(0,1);
-        mSpeakingAnimator.setDuration(1000);
-        mSpeakingAnimator.setRepeatMode(ValueAnimator.REVERSE);
-        mSpeakingAnimator.setRepeatCount(ValueAnimator.INFINITE);
-        mSpeakingAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
-            @Override
-            public void onAnimationUpdate(ValueAnimator animation) {
-                Log.d(TAG, "onAnimationUpdate: ");
-                int color = (int) new ArgbEvaluator().evaluate(animation.getAnimatedFraction(),mBlockColor,mBackGroundColor);
-                mBackGroundPaint.setColor(color);
-                postInvalidate();
-            }
-        });
-        mSpeakingAnimator.addListener(new AbstractAnimatorListener() {
-            @Override
-            public void onAnimationStart(Animator animation) {
-                mStateBlock1.setVisibility(GONE);
-            }
-        });
-
-        Log.d(TAG, "initAnimators: getWidth()" + (getWidth() + mBlockWidth / 4 - mBlockWidth));
         mThinkingAnimator = ValueAnimator.ofInt(0,getWidth() + mBlockWidth / 4 - mBlockWidth);
         mThinkingAnimator.setDuration(1000);
         mThinkingAnimator.setRepeatMode(ValueAnimator.RESTART);
@@ -148,21 +130,74 @@ public class StateBar extends ViewGroup {
         mThinkingAnimator.addListener(new AbstractAnimatorListener() {
             @Override
             public void onAnimationEnd(Animator animation) {
-                super.onAnimationEnd(animation);
-                mThinkingAnimator.setRepeatCount(ValueAnimator.INFINITE);
-                mSpeakingAnimator.start();
+                //属性isCancel请看AbstractAnimatorListener
+                if (!isCancel) {
+                    Log.d(TAG, "onAnimationEnd: asdasd");
+                    mThinkingAnimator.setRepeatCount(ValueAnimator.INFINITE);
+                    startSpeak();
+                }else {
+                    super.onAnimationEnd(animation);
+                }
             }
+        });
 
+
+        mSpeakingAnimator = ValueAnimator.ofFloat(0,1);
+        mSpeakingAnimator.setDuration(1000);
+        mSpeakingAnimator.setRepeatMode(ValueAnimator.REVERSE);
+        mSpeakingAnimator.setRepeatCount(ValueAnimator.INFINITE);
+        mSpeakingAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
             @Override
-            public void onAnimationCancel(Animator animation) {
-                super.onAnimationCancel(animation);
+            public void onAnimationUpdate(ValueAnimator animation) {
+                int color = (int) new ArgbEvaluator().evaluate(animation.getAnimatedFraction(),mBlockColor,mBackGroundColor);
+                mBackGroundPaint.setColor(color);
+                postInvalidate();
             }
-
+        });
+        mSpeakingAnimator.addListener(new AbstractAnimatorListener() {
             @Override
-            public void onAnimationRepeat(Animator animation) {
-//                if (mCurrentState != THINKING){
-//                    mThinkingAnimator.cancel();
-//                }
+            public void onAnimationStart(Animator animation) {
+                mStateBlock1.setVisibility(GONE);
+            }
+        });
+
+        mColorAnimator = ValueAnimator.ofFloat(0,1);
+        mColorAnimator.setDuration(1000);
+        mColorAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+            @Override
+            public void onAnimationUpdate(ValueAnimator animation) {
+                int color = (int) new ArgbEvaluator().evaluate(animation.getAnimatedFraction(),mStartColor,mEndColor);
+                mBackGroundPaint.setColor(color);
+                postInvalidate();
+            }
+        });
+        mAlphaInAnimator = ValueAnimator.ofInt(0, 255);
+        mAlphaInAnimator.setDuration(1000);
+        mAlphaInAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+            @Override
+            public void onAnimationUpdate(ValueAnimator animation) {
+                mBackGroundPaint.setAlpha((Integer) animation.getAnimatedValue());
+            }
+        });
+        mAlphaInAnimator.addListener(new AbstractAnimatorListener() {
+            @Override
+            public void onAnimationStart(Animator animation) {
+            }
+        });
+
+        mAlphaOutAnimator = ValueAnimator.ofInt(255, 0);
+        mAlphaOutAnimator.setDuration(1000);
+        mAlphaOutAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+            @Override
+            public void onAnimationUpdate(ValueAnimator animation) {
+                mBackGroundPaint.setAlpha((Integer) animation.getAnimatedValue());
+                postInvalidate();
+            }
+        });
+        mAlphaOutAnimator.addListener(new AbstractAnimatorListener() {
+            @Override
+            public void onAnimationStart(Animator animation) {
+                hideAll();
             }
         });
     }
@@ -171,7 +206,6 @@ public class StateBar extends ViewGroup {
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
         super.onMeasure(widthMeasureSpec, heightMeasureSpec);
 //        mMaskHeight = MeasureSpec.getSize(heightMeasureSpec);
-
     }
 
     @Override
@@ -185,19 +219,15 @@ public class StateBar extends ViewGroup {
     @Override
     protected void onLayout(boolean changed, int l, int t, int r, int b) {
         Log.d(TAG, "onLayout: ");
-        mStateBlock1.layout(positionX, 0, positionX + mBlockWidth, mMaskHeight);
+        mStateBlock1.layout(positionX - l, 0, positionX - l + mBlockWidth, mMaskHeight);
         mStateBlock2.layout(r - positionX - mBlockWidth, 0, r - positionX, mMaskHeight);
-
+        mMidBlock.layout((r - l - mBlockWidth) / 2, 0,(r - l + mBlockWidth) / 2, mMaskHeight );
     }
 
     private void initPaint() {
         mMaskPaint = new Paint();
         mMaskPaint.setColor(mBackGroundColor);
         mMaskPaint.setMaskFilter(new BlurMaskFilter(mMaskHeight , BlurMaskFilter.Blur.NORMAL));
-
-
-//        mBlockPaint = new Paint();
-//        mBlockPaint.setColor(mBlockColor);
 
         mBackGroundPaint = new Paint();
         mBackGroundPaint.setColor(mBackGroundColor);
@@ -216,71 +246,20 @@ public class StateBar extends ViewGroup {
     }
 
     private void blockIncrease(){
-        mStateBlock1.layout(positionX - mIncrease, 0, positionX + mBlockWidth + mIncrease, mMaskHeight);
-    }
-
-    private void listenMove() {
-//        if (positionX < getWidth() / 2){
-//            positionX += 8;
-//            requestLayout();
-//        }
-        float translationX = mStateBlock1.getTranslationX();
-        if (translationX < mMidTransitionX) {
-            translationX += 65;
-            if (translationX > mMidTransitionX) {
-                mStateBlock1.setTranslationX(mMidTransitionX);
-                mStateBlock2.setTranslationX(-mMidTransitionX);
-            } else {
-                mStateBlock1.setTranslationX(translationX);
-                mStateBlock2.setTranslationX(-translationX);
-            }
-            Log.d(TAG, "translationX: " + translationX);
-            postInvalidate();
-        }
-    }
-
-    public void setState(int nextState) {
-        boolean shouldInterrupt = false;
-        switch (nextState){
-            case LISTENING:
-            case LISTENING_ACTIVE:
-            case THINKING:
-            case SPEAKING:
-                shouldInterrupt = false;
-                break;
-            case NONE:
-            case MIC_OFF:
-            case SYSTEM_ERROR:
-                shouldInterrupt = true;
-                break;
-
-        }
-
-        if (shouldInterrupt && mCurrentStateAnimator != null){
-            mCurrentStateAnimator.cancel();
-        }
-        switch (mCurrentState){
-            case NONE:
-
-                break;
-            case LISTENING:
-                break;
-            case LISTENING_ACTIVE:
-                break;
-            case THINKING:
-                break;
-            case SPEAKING:
-                break;
-            case MIC_OFF:
-                break;
-            case SYSTEM_ERROR:
-                break;
-        }
-        this.mCurrentState = nextState;
+        mMidBlock.layout(
+                (getWidth() - mBlockWidth) / 2 - mIncrease
+                ,0
+                ,(getWidth() + mBlockWidth) / 2 + mIncrease
+                ,mMaskHeight);
     }
 
     public void startSpeak(){
-        mSpeakingAnimator.start();
+        mMidBlock.setVisibility(GONE);
+        mCurrentStateAnimator.cancel();
+        mCurrentStateAnimator = mSpeakingAnimator;
+        mCurrentStateAnimator.start();
+
+        mCurrentState = SPEAKING;
     }
 
     public void startListen() {
@@ -288,34 +267,77 @@ public class StateBar extends ViewGroup {
         mStateBlock2.setVisibility(VISIBLE);
         mStateBlock1.setTranslationX(0);
         mStateBlock2.setTranslationX(0);
-//        listenMove();
-        mListeningAnimator.start();
+        mMidBlock.setVisibility(GONE);
+        mCurrentStateAnimator = mListeningAnimator;
+        mCurrentStateAnimator.start();
+        mCurrentState = LISTENING;
     }
 
+
+
     public void startActive(){
-//        if (mScale > 2.5){
-//            mScale = 1;
-//        }
-        mStateBlock2.setVisibility(GONE);
-        mStateBlock1.setIsMasked(false);
-//        mScale += 0.2f;
-//        mStateBlock1.setScaleX(mScale);
+        showMidBlock();
+        mMidBlock.setIsMasked(true);
+
+        mCurrentState = LISTENING_ACTIVE;
 
         mIncrease += 10;
-        mStateBlock1.layout(positionX - mIncrease, 0, positionX + mBlockWidth + mIncrease, mMaskHeight);
-        Log.d(TAG, "getWidth: " + mStateBlock1.getWidth());
+        blockIncrease();
     }
 
     public void startThink(){
-        mStateBlock2.setVisibility(GONE);
-        mStateBlock1.setIsMasked(false);
-        mThinkingAnimator.start();
+        showMidBlock();
+        mMidBlock.setIsMasked(false);
+        mCurrentStateAnimator = mThinkingAnimator;
+        mCurrentStateAnimator.start();
+
+        mCurrentState = THINKING;
+    }
+
+    public void startSysError(){
+        hideAll();
+        mCurrentStateAnimator.cancel();
+        mStartColor = mBackGroundPaint.getColor();
+        mEndColor = COLOR_SYS_ERROR;
+        mCurrentStateAnimator = mColorAnimator;
+        mCurrentStateAnimator.start();
+
     }
 
     public void startMicOff(){
+        hideAll();
+        mCurrentStateAnimator.cancel();
+        mStartColor = mBackGroundPaint.getColor();
+        mEndColor = COLOR_MIC_OFF;
+        mCurrentStateAnimator = mColorAnimator;
+        mCurrentStateAnimator.start();
+    }
+
+    public void startIdle(){
+        mCurrentStateAnimator.cancel();
+        mCurrentStateAnimator = mAlphaOutAnimator;
+        mCurrentStateAnimator.start();
+    }
+
+    public void nextState(){
         mThinkingAnimator.setRepeatCount(0);
     }
 
+    private void hideAll(){
+        mStateBlock2.setVisibility(GONE);
+        mStateBlock1.setVisibility(GONE);
+        mMidBlock.setVisibility(GONE);
+    }
+
+    private void showMidBlock(){
+        mStateBlock2.setVisibility(GONE);
+        mStateBlock1.setVisibility(GONE);
+        mMidBlock.setVisibility(VISIBLE);
+    }
+
+    public void setIncrease(int increase) {
+        this.mIncrease = increase;
+    }
 
     public int getMaskHeight() {
         return mMaskHeight;

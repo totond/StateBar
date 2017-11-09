@@ -17,7 +17,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         setContentView(R.layout.activity_main);
 
         mStateBar = (StateBar) findViewById(R.id.sb);
-        btn_listening = (Button) findViewById(R.id.btn_listening);
+        btn_listening = (Button) findViewById(R.id.btn_idle);
         btn_listening.setOnClickListener(this);
         btn_active = (Button) findViewById(R.id.btn_active);
         btn_active.setOnClickListener(this);
@@ -35,7 +35,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     @Override
     public void onClick(View v) {
         switch (v.getId()){
-            case R.id.btn_listening:
+            case R.id.btn_idle:
                 mStateBar.startListen();
                 break;
             case R.id.btn_active:
@@ -51,7 +51,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 mStateBar.startMicOff();
                 break;
             case R.id.btn_sys_error:
-
+                mStateBar.startIdle();
                 break;
         }
     }
