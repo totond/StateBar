@@ -2,6 +2,7 @@
 <resources>
     <declare-styleable name="StateBar">
         <attr name="maskHeight" format="dimension"/>
-
+        <attr name="blockWidth" format="dimension"/>
+        <attr name="barHeight" format="dimension"/>
     </declare-styleable>
 </resources>

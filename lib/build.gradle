@@ -1,4 +1,5 @@
 apply plugin: 'com.android.library'
+apply plugin: 'com.novoda.bintray-release'
 
 android {
     compileSdkVersion 25
@@ -28,4 +29,14 @@ dependencies {
     })
     compile 'com.android.support:appcompat-v7:25.3.1'
     testCompile 'junit:junit:4.12'
+}
+
+publish {
+    userOrg = 'yanzhikaijky'
+    repoName = 'CustomViewRepository'
+    groupId = 'com.yanzhikai'
+    artifactId = 'StateBar'
+    publishVersion = '0.0.1'
+    desc = 'a state bar for Alexa'
+    website = 'https://github.com/totond/StateBar'
 }

@@ -46,8 +46,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         mStateBar.setStateListener(new StateListener() {
             @Override
-            public void onStateChanged(@StateBar.State int nextState) {
-                switch (nextState){
+            public void onStateChanged(@StateBar.State int currentState,@StateBar.State int newState) {
+                switch (newState){
                     case IDLE:
                         tv.setText("IDLE");
                         break;

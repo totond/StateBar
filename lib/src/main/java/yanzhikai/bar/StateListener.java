@@ -5,5 +5,5 @@ package yanzhikai.bar;
  */
 
 public interface StateListener {
-    void onStateChanged(@StateBar.State int nextState);
+    void onStateChanged(@StateBar.State int currentState,@StateBar.State int newState);
 }
