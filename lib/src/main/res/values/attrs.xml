@@ -4,5 +4,9 @@
         <attr name="maskHeight" format="dimension"/>
         <attr name="blockWidth" format="dimension"/>
         <attr name="barHeight" format="dimension"/>
+        <attr name="thinkingTime" format="integer"/>
+        <attr name="speakingTime" format="integer"/>
+        <attr name="listenTime" format="integer"/>
+        <attr name="alphaTime" format="integer"/>
     </declare-styleable>
 </resources>

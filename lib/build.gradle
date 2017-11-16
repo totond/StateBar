@@ -36,7 +36,7 @@ publish {
     repoName = 'CustomViewRepository'
     groupId = 'com.yanzhikai'
     artifactId = 'StateBar'
-    publishVersion = '0.0.1'
-    desc = 'a state bar for Alexa'
+    publishVersion = '0.0.5'
+    desc = 'a status bar that follows the Amazon Alexa Voice Service UX design'
     website = 'https://github.com/totond/StateBar'
 }

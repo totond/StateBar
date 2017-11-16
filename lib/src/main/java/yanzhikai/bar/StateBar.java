@@ -44,6 +44,8 @@ public class StateBar extends ViewGroup {
     private int mIncrease = 10;
     //状态回调
     private StateListener mStateListener;
+    //一些时间
+    private int mThinkingTime = 800,mSpeakingTime = 1000, mListenTime = 400, mAlphaTime = 600;
 
     //状态定义
     public static final int IDLE = 0 , LISTENING = 1, LISTENING_ACTIVE = 2,THINKING = 3,SPEAKING = 4, MIC_OFF = 5, SYSTEM_ERROR = 6;
@@ -85,6 +87,10 @@ public class StateBar extends ViewGroup {
         mMaskHeight = typedArray.getDimensionPixelSize(R.styleable.StateBar_maskHeight,mMaskHeight);
         mBlockWidth = typedArray.getDimensionPixelSize(R.styleable.StateBar_blockWidth,mBlockWidth);
         mBarHeight = typedArray.getDimensionPixelSize(R.styleable.StateBar_barHeight,mBarHeight);
+        mThinkingTime = typedArray.getInt(R.styleable.StateBar_thinkingTime,mThinkingTime);
+        mSpeakingTime = typedArray.getInt(R.styleable.StateBar_speakingTime,mSpeakingTime);
+        mListenTime = typedArray.getInt(R.styleable.StateBar_listenTime,mListenTime);
+        mAlphaTime = typedArray.getInt(R.styleable.StateBar_alphaTime,mAlphaTime);
     }
 
     private void init(Context context) {
@@ -110,7 +116,7 @@ public class StateBar extends ViewGroup {
     private void initAnimators() {
         mListeningAnimator = ValueAnimator.ofInt(0,mMidTransitionX);
         mListeningAnimator.setInterpolator(new LinearInterpolator());
-        mListeningAnimator.setDuration(400);
+        mListeningAnimator.setDuration(mListenTime);
         mListeningAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
             @Override
             public void onAnimationUpdate(ValueAnimator animation) {
@@ -129,7 +135,7 @@ public class StateBar extends ViewGroup {
         });
 
         mThinkingAnimator = ValueAnimator.ofInt(0,(getWidth() + mBlockWidth / 4) / 2);
-        mThinkingAnimator.setDuration(1000);
+        mThinkingAnimator.setDuration(mThinkingTime);
         mThinkingAnimator.setRepeatMode(ValueAnimator.RESTART);
         mThinkingAnimator.setRepeatCount(ValueAnimator.INFINITE);
         mThinkingAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
@@ -145,9 +151,9 @@ public class StateBar extends ViewGroup {
             public void onAnimationEnd(Animator animation) {
                 //属性isCancel请看AbstractAnimatorListener
                 if (!isCancel) {
-                    Log.d(TAG, "onAnimationEnd: asdasd");
-                    mThinkingAnimator.setRepeatCount(ValueAnimator.INFINITE);
-                    startSpeak();
+//                    Log.d(TAG, "onAnimationEnd: asdasd");
+//                    mThinkingAnimator.setRepeatCount(ValueAnimator.INFINITE);
+//                    startSpeak();
                 }else {
                     super.onAnimationEnd(animation);
                 }
@@ -156,7 +162,7 @@ public class StateBar extends ViewGroup {
 
 
         mSpeakingAnimator = ValueAnimator.ofFloat(0,1);
-        mSpeakingAnimator.setDuration(1000);
+        mSpeakingAnimator.setDuration(mSpeakingTime);
         mSpeakingAnimator.setRepeatMode(ValueAnimator.REVERSE);
         mSpeakingAnimator.setRepeatCount(ValueAnimator.INFINITE);
         mSpeakingAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
@@ -185,7 +191,7 @@ public class StateBar extends ViewGroup {
         });
 
         mAlphaInAnimator = ValueAnimator.ofInt(0, 255);
-        mAlphaInAnimator.setDuration(600);
+        mAlphaInAnimator.setDuration(mAlphaTime);
         mAlphaInAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
             @Override
             public void onAnimationUpdate(ValueAnimator animation) {
@@ -195,12 +201,12 @@ public class StateBar extends ViewGroup {
         mAlphaInAnimator.addListener(new AbstractAnimatorListener() {
             @Override
             public void onAnimationEnd(Animator animation) {
-                startListen();
+                startListening();
             }
         });
 
         mAlphaOutAnimator = ValueAnimator.ofInt(255, 0);
-        mAlphaOutAnimator.setDuration(600);
+        mAlphaOutAnimator.setDuration(mAlphaTime);
         mAlphaOutAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
             @Override
             public void onAnimationUpdate(ValueAnimator animation) {
@@ -262,7 +268,7 @@ public class StateBar extends ViewGroup {
                 ,getHeight());
     }
 
-    private void startIdle(){
+    public void startIdle(){
         cancelAllAnimator();
         mAlphaOutAnimator.start();
         if (mStateListener != null){
@@ -271,7 +277,13 @@ public class StateBar extends ViewGroup {
         mCurrentState = IDLE;
     }
 
-    private void startListen() {
+    public void startListen(){
+        cancelAllAnimator();
+        reset();
+        mAlphaInAnimator.start();
+    }
+
+    private void startListening() {
         mStateBlock1.setVisibility(VISIBLE);
         mStateBlock2.setVisibility(VISIBLE);
         mStateBlock1.setTranslationX(0);
@@ -297,8 +309,11 @@ public class StateBar extends ViewGroup {
 
     }
 
-    private void startThink(){
+    public void startThink(){
+        cancelAllAnimator();
         showMidBlock();
+        mBackGroundPaint.setAlpha(255);
+        mBackGroundPaint.setColor(COLOR_LISTENING);
         mMidBlock.setIsMasked(false);
 
         mThinkingAnimator.start();
@@ -308,8 +323,10 @@ public class StateBar extends ViewGroup {
         mCurrentState = THINKING;
     }
 
-    private void startSpeak(){
+    public void startSpeak(){
+        cancelAllAnimator();
         mMidBlock.setVisibility(GONE);
+        mBackGroundPaint.setAlpha(255);
         mSpeakingAnimator.start();
 
         if (mStateListener != null){
@@ -360,9 +377,7 @@ public class StateBar extends ViewGroup {
     public void nextState(){
         switch (mCurrentState){
             case IDLE:
-                cancelAllAnimator();
-                reset();
-                mAlphaInAnimator.start();
+                startListen();
                 break;
             case LISTENING:
                 break;
@@ -370,7 +385,7 @@ public class StateBar extends ViewGroup {
                 startThink();
                 break;
             case THINKING:
-                mThinkingAnimator.setRepeatCount(0);
+                startSpeak();
                 break;
             case SPEAKING:
                 startIdle();

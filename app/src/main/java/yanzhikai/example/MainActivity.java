@@ -22,7 +22,7 @@ import static yanzhikai.bar.StateBar.THINKING;
 public class MainActivity extends AppCompatActivity implements View.OnClickListener {
     private StateBar mStateBar;
     private TextView tv;
-    private Button btn_idle,btn_next,btn_mic_off,btn_sys_error,btn_papa;
+    private Button btn_idle,btn_listen,btn_think,btn_speak,btn_next,btn_mic_off,btn_sys_error,btn_papa;
     private Random random = new Random();
 
     @Override
@@ -31,8 +31,14 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         setContentView(R.layout.activity_main);
 
         mStateBar = (StateBar) findViewById(R.id.sb);
-//        btn_idle = (Button) findViewById(R.id.btn_idle);
-//        btn_idle.setOnClickListener(this);
+        btn_idle = (Button) findViewById(R.id.btn_idle);
+        btn_idle.setOnClickListener(this);
+        btn_listen = (Button) findViewById(R.id.btn_listen);
+        btn_listen.setOnClickListener(this);
+        btn_think = (Button) findViewById(R.id.btn_think);
+        btn_think.setOnClickListener(this);
+        btn_speak = (Button) findViewById(R.id.btn_speak);
+        btn_speak.setOnClickListener(this);
         btn_next = (Button) findViewById(R.id.btn_next);
         btn_next.setOnClickListener(this);
         btn_mic_off = (Button) findViewById(R.id.btn_mic_off);
@@ -80,6 +86,18 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         switch (v.getId()){
             case R.id.btn_next:
                 mStateBar.nextState();
+                break;
+            case R.id.btn_idle:
+                mStateBar.startIdle();
+                break;
+            case R.id.btn_listen:
+                mStateBar.startListen();
+                break;
+            case R.id.btn_think:
+                mStateBar.startThink();
+                break;
+            case R.id.btn_speak:
+                mStateBar.startSpeak();
                 break;
             case R.id.btn_mic_off:
                 mStateBar.startMicOff();
